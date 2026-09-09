@@ -1,0 +1,18 @@
+THIRD-PARTY NOTICE
+==================
+
+This repository contains no third-party source code, designs or documents.
+
+It is designed to work alongside the Open Continuum Robotics Project's
+OpenCR-Hardware, which is published separately by the Continuum Robotics
+Laboratory under the BSD 3-Clause License and is neither vendored nor
+redistributed here:
+
+    https://github.com/ContinuumRoboticsLab/OpenCR-Hardware
+
+PROJECT_GREENFIELD_APPLICABILITY_ANALYSIS.md describes that repository's
+structure and parts in order to reference them. Any file paths it names --
+mechanics/, electronics/ and their contents -- belong to OpenCR-Hardware and
+are not present in this repository.
+
+Their published papers are cited in README.md under Reference Documentation.
