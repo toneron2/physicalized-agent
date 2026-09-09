@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://physicalized-agent.dev/schemas/request.json",
+  "title": "Physicalized Agent Request Manifest",
+  "description": "Specifies goals for sub-agent execution in the Physicalized Agent pipeline",
+  "type": "object",
+  "required": ["id", "request_type", "target_agent", "goal"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this request"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when request was created"
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "design_spine",
+        "design_disk",
+        "design_base",
+        "design_head",
+        "compute_kinematics",
+        "compute_workspace",
+        "generate_firmware",
+        "configure_sensors",
+        "run_simulation",
+        "render_visualization",
+        "generate_bom",
+        "create_assembly_guide"
+      ],
+      "description": "Type of operation requested"
+    },
+    "target_agent": {
+      "type": "string",
+      "enum": ["pa-conductor", "pa-kinematics", "pa-firmware", "pa-mechanical", "pa-sensors", "pa-viz"],
+      "description": "Agent designated to handle this request"
+    },
+    "source_agent": {
+      "type": "string",
+      "default": "pa-conductor",
+      "description": "Agent that originated this request"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Human-readable goal description"
+    },
+    "specs": {
+      "$ref": "#/$defs/design_specs"
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Additional parameters specific to request type"
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "default": 3,
+      "description": "Priority level (1=lowest, 5=highest)"
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Current iteration number"
+    },
+    "parent_request_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID of parent request if this is a sub-request"
+    }
+  },
+  "$defs": {
+    "design_specs": {
+      "type": "object",
+      "properties": {
+        "disk_count": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 15,
+          "default": 6,
+          "description": "Number of spacer disks"
+        },
+        "disk_od_mm": {
+          "type": "number",
+          "minimum": 15,
+          "maximum": 50,
+          "default": 25,
+          "description": "Spacer disk outer diameter in mm"
+        },
+        "backbone_od_mm": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3.0,
+          "default": 1.4,
+          "description": "NiTi backbone outer diameter in mm"
+        },
+        "tendon_count": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 6,
+          "default": 3,
+          "description": "Number of actuation tendons"
+        },
+        "max_bend_deg": {
+          "type": "number",
+          "minimum": 15,
+          "maximum": 90,
+          "default": 45,
+          "description": "Maximum bending angle in degrees"
+        },
+        "spine_length_mm": {
+          "type": "number",
+          "minimum": 50,
+          "maximum": 300,
+          "default": 100,
+          "description": "Total spine length in mm"
+        }
+      }
+    },
+    "kinematics_input": {
+      "type": "object",
+      "properties": {
+        "kappa": {
+          "type": "number",
+          "description": "Curvature in 1/m"
+        },
+        "phi": {
+          "type": "number",
+          "description": "Bending plane angle in radians"
+        },
+        "s": {
+          "type": "number",
+          "description": "Arc length in m"
+        }
+      }
+    }
+  }
+}
