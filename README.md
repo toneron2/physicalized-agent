@@ -14,8 +14,64 @@
 > BSD 3-Clause License. Clone theirs alongside this one; nothing here redistributes it.
 > Their papers are cited under [Reference Documentation](#reference-documentation).
 
+## Where This Fits
+
+This repository is the **design system**. The thing it designs is a sensor head, and that
+head is the first physical device in a governance architecture that until now existed only
+as software.
+
+```
+        ┌──────────────────────────────────────────────┐
+        │  BROAD  —  healthcare agentic ERP in cloud    │
+        │  FHIR R4 · clinical pathways · access layer   │
+        │  governed by URGE, the formal policy engine   │
+        └──────────────────────────────────────────────┘
+                          ▲   │
+   Stream 0  heartbeat +  │   │  governance control     bidirectional, critical
+   Stream 1  XYZ vector map (JSON-LD)                   high, drop old frames
+   Stream 2  diagnostic audio (AAC)                     medium
+   Stream 3  high-res video (H.264 / JPEG)              low, yields to the rest
+                          │   ▼
+              WebTransport over HTTP/3  (QUIC + TLS 1.3)
+                          │   ▲
+        ┌──────────────────────────────────────────────┐
+        │  Physicalized Agent  —  the sensor head       │
+        │  stereo vision · binaural MEMS in horns       │
+        │  local governance state machine (overrides)   │
+        └──────────────────────────────────────────────┘
+```
+
+**Determinism over probability.** The head calculates vectors, not guesses. Audio arrives as
+an azimuth, elevation and intensity derived from interaural time and level differences and a
+spectral notch cut by the horn geometry. Vision arrives as a rectified centroid with an
+estimated depth. Fusing the two produces a 3D logic map, and a rule over that map — floor-level
+audio source, intensity above threshold — is a governance decision the device can make on its
+own, without a model and without the network.
+
+That is what makes it inexpensive. Deterministic signal processing on an
+off-the-shelf [RISC-V microcontroller](#compute--control) replaces the neural accelerator an
+equivalent AI camera needs, and the cost target is the product requirement, not an optimisation: the goal is
+a device you can afford to give to the patient rather than sell to the building. Connected, it
+acts as the patient's advocate — the head answers to the person in front of it, and the
+reasoning behind every decision it forwards is auditable upstream.
+
+**The transport is deliberate.** WebTransport over HTTP/3 is Chromium's QUIC stack, which
+means bidirectional streams and datagrams over UDP with TLS 1.3, independent stream
+prioritisation, and no head-of-line blocking. A dropped video frame cannot delay a governance
+heartbeat. The cloud endpoint scales to zero while the heartbeat stays nominal.
+
+**Two halves, bound not merged.** The software half is here. The mechanical half — acoustic
+horn geometry, the concha mount, the head shell, the articulated neck — is a coordinated
+industrial design effort tracked separately, because a shared interface document beats a
+shared repository. The continuum-robot articulation this scaffold targets is the advanced
+variant; the frozen first specification uses a two-axis pan/tilt gimbal outside the head, with
+servo power never entering it.
+
+---
+
 ## Table of Contents
 
+- [Where This Fits](#where-this-fits)
 - [Executive Summary](#executive-summary)
 - [The Innovation: Continuum Robot Sensor Head](#the-innovation-continuum-robot-sensor-head)
 - [Claude Code-Native Architecture](#claude-code-native-architecture)
