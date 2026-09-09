@@ -7,6 +7,15 @@
 
 ---
 
+![Concept render of the Physicalized Agent: a white ovoid sensor head with a dark horizontal vision strip and a conical acoustic horn on its flank, carried on a segmented tendon-driven neck rising from a circular base](docs/sensor-head-concept.jpg)
+
+*Concept render, not a built device. Three features in it drive the rest of the design:
+the **horn** on the flank is the acoustic geometry that makes vertical sound localisation
+possible from two microphones, the **segmented neck** is the tendon-driven continuum spine
+this scaffold designs, and the **vision strip** carries the stereo pair. The frozen first
+specification is simpler than this — a two-axis gimbal outside the head — and the articulated
+form is the target it builds toward.*
+
 > **Relationship to OpenCR-Hardware.** This repository is a software scaffold, not a
 > hardware fork. It contains no third-party source. The mechanical and electronic designs
 > it targets are published separately by the Continuum Robotics Laboratory as
