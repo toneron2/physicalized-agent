@@ -19,12 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This repository contains no third-party source. It is designed to work
-alongside the Open Continuum Robotics Project's OpenCR-Hardware, which is
-published separately by the Continuum Robotics Laboratory under the BSD
-3-Clause License and is neither vendored nor redistributed here:
-
-    https://github.com/ContinuumRoboticsLab/OpenCR-Hardware
