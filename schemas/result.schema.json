@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://physicalized-agent.dev/schemas/result.json",
+  "title": "Physicalized Agent Result Manifest",
+  "description": "Outputs from sub-agent execution with scores and artifacts",
+  "type": "object",
+  "required": ["id", "request_id", "status", "agent"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this result"
+    },
+    "request_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID of the request this result fulfills"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent that produced this result"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "partial", "failed", "blocked"],
+      "description": "Execution status"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when result was created"
+    },
+    "scores": {
+      "$ref": "#/$defs/scores"
+    },
+    "artifacts": {
+      "$ref": "#/$defs/artifacts"
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      },
+      "description": "Any issues or warnings encountered"
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Recommended follow-up actions"
+    }
+  },
+  "$defs": {
+    "scores": {
+      "type": "object",
+      "properties": {
+        "overall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Overall quality score (0-1)"
+        },
+        "kinematics_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Kinematic performance score"
+        },
+        "manufacturability_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Ease of manufacturing score"
+        },
+        "cost_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Cost efficiency score (1 = under budget)"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "stl_files": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Paths to generated STL files"
+        },
+        "firmware_project": {
+          "type": "string",
+          "description": "Path to firmware project directory"
+        },
+        "visualizations": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Paths to generated images/animations"
+        },
+        "documentation": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Paths to generated documentation"
+        },
+        "bom": {
+          "type": "string",
+          "description": "Path to bill of materials"
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "workspace_volume_mm3": {
+          "type": "number",
+          "description": "Reachable workspace volume"
+        },
+        "max_bend_achieved_deg": {
+          "type": "number",
+          "description": "Maximum bend angle achieved"
+        },
+        "total_cost_usd": {
+          "type": "number",
+          "description": "Total BOM cost"
+        },
+        "print_time_hours": {
+          "type": "number",
+          "description": "Estimated 3D print time"
+        },
+        "material_usage_g": {
+          "type": "number",
+          "description": "Total filament usage"
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error", "blocker"],
+          "description": "Issue severity"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["kinematics", "mechanical", "electronics", "cost", "manufacturing"],
+          "description": "Issue category"
+        },
+        "message": {
+          "type": "string",
+          "description": "Issue description"
+        },
+        "suggestion": {
+          "type": "string",
+          "description": "Suggested resolution"
+        }
+      },
+      "required": ["severity", "message"]
+    }
+  }
+}

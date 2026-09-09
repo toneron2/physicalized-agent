@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "kinematics": {
+      "command": "node",
+      "args": ["mcp-servers/kinematics/dist/index.js"],
+      "description": "TDCR kinematics computation (FK, IK, tendon mapping)"
+    },
+    "hardware": {
+      "command": "node",
+      "args": ["mcp-servers/hardware/dist/index.js"],
+      "description": "ESP32 firmware generation and hardware configuration"
+    },
+    "simulation": {
+      "command": "node",
+      "args": ["mcp-servers/simulation/dist/index.js"],
+      "description": "Motion simulation, workspace analysis, visualization"
+    }
+  }
+}

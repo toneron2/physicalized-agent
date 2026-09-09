@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://physicalized-agent.dev/schemas/constraint.json",
+  "title": "Physicalized Agent Constraint Manifest",
+  "description": "Defines boundaries and limits for the design pipeline",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this constraint set"
+    },
+    "budget": {
+      "$ref": "#/$defs/budget_constraints"
+    },
+    "mechanical": {
+      "$ref": "#/$defs/mechanical_constraints"
+    },
+    "kinematics": {
+      "$ref": "#/$defs/kinematic_constraints"
+    },
+    "manufacturing": {
+      "$ref": "#/$defs/manufacturing_constraints"
+    },
+    "electronics": {
+      "$ref": "#/$defs/electronics_constraints"
+    }
+  },
+  "$defs": {
+    "budget_constraints": {
+      "type": "object",
+      "properties": {
+        "total_bom_usd": {
+          "type": "number",
+          "minimum": 50,
+          "maximum": 500,
+          "default": 225,
+          "description": "Maximum total BOM cost in USD"
+        },
+        "mechanical_budget_usd": {
+          "type": "number",
+          "default": 78,
+          "description": "Budget for mechanical components"
+        },
+        "actuation_budget_usd": {
+          "type": "number",
+          "default": 69,
+          "description": "Budget for actuation (motors, drivers)"
+        },
+        "electronics_budget_usd": {
+          "type": "number",
+          "default": 58,
+          "description": "Budget for electronics and sensors"
+        },
+        "acoustic_budget_usd": {
+          "type": "number",
+          "default": 20,
+          "description": "Budget for acoustic elements"
+        }
+      }
+    },
+    "mechanical_constraints": {
+      "type": "object",
+      "properties": {
+        "max_envelope_mm": {
+          "type": "array",
+          "items": {"type": "number"},
+          "minItems": 3,
+          "maxItems": 3,
+          "default": [100, 100, 200],
+          "description": "Maximum bounding box [X, Y, Z] in mm"
+        },
+        "max_head_mass_g": {
+          "type": "number",
+          "minimum": 50,
+          "maximum": 500,
+          "default": 200,
+          "description": "Maximum sensor head mass in grams"
+        },
+        "print_volume_mm": {
+          "type": "array",
+          "items": {"type": "number"},
+          "minItems": 3,
+          "maxItems": 3,
+          "default": [220, 220, 250],
+          "description": "3D printer build volume [X, Y, Z] in mm"
+        }
+      }
+    },
+    "kinematic_constraints": {
+      "type": "object",
+      "properties": {
+        "max_curvature_per_m": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 200,
+          "default": 80,
+          "description": "Maximum operating curvature in 1/m"
+        },
+        "min_tendon_tension_n": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.5,
+          "description": "Minimum tendon tension to prevent slack (N)"
+        },
+        "max_tendon_tension_n": {
+          "type": "number",
+          "default": 20,
+          "description": "Maximum tendon tension (N)"
+        },
+        "safety_margin": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.5,
+          "default": 0.3,
+          "description": "Safety margin (fraction of max capability)"
+        }
+      }
+    },
+    "manufacturing_constraints": {
+      "type": "object",
+      "properties": {
+        "min_wall_thickness_mm": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3.0,
+          "default": 1.2,
+          "description": "Minimum printable wall thickness"
+        },
+        "min_hole_diameter_mm": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 5.0,
+          "default": 1.5,
+          "description": "Minimum reliable hole diameter"
+        },
+        "max_overhang_deg": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 60,
+          "default": 45,
+          "description": "Maximum unsupported overhang angle"
+        },
+        "layer_height_mm": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.3,
+          "default": 0.2,
+          "description": "Target layer height for printing"
+        }
+      }
+    },
+    "electronics_constraints": {
+      "type": "object",
+      "properties": {
+        "mcu": {
+          "type": "string",
+          "default": "ESP32-P4-WIFI6-M",
+          "description": "Target microcontroller"
+        },
+        "max_gpio_pins": {
+          "type": "integer",
+          "default": 30,
+          "description": "Available GPIO pins"
+        },
+        "stepper_interface": {
+          "type": "string",
+          "enum": ["step_dir", "uart", "spi"],
+          "default": "step_dir",
+          "description": "Stepper driver interface type"
+        }
+      }
+    }
+  }
+}
