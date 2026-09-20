@@ -8,7 +8,7 @@ Physicalized Agent is a **Claude Code-native** autonomous framework for designin
 
 **Target Hardware:**
 - ESP32-P4-WIFI6-M primary MCU (edge computing, not ROS)
-- Tendon-Driven Continuum Robot (TDCR) spine architecture
+- Tendon-Driven Continuum Robot (TDCR) spine architecture — the articulated target; the frozen first specification (`docs/functional-spec-2026-02.md`) is a two-axis gimbal outside the head
 - Low-cost stepper + rack-and-pinion actuation (~$54-69)
 - Camera + microphone sensor payload
 - Target total BOM: ~$225
