@@ -5,6 +5,11 @@
 [![MCP](https://img.shields.io/badge/MCP-1.0-green)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+**Status: The sensor head is specified and not yet built.** The specification is in this
+repository: the [PRD](docs/prd-2026-01.md) (January 2026), the
+[frozen functional spec](docs/functional-spec-2026-02.md) and its
+[bill of materials](docs/bom-2026-02.csv) (February 2026). See [Documents](#documents).
+
 ---
 
 ![Concept render of the Physicalized Agent: a white ovoid sensor head with a dark horizontal vision strip and a conical acoustic horn on its flank, carried on a segmented tendon-driven neck rising from a circular base](docs/sensor-head-concept.jpg)
@@ -27,13 +32,18 @@ form is the target it builds toward.*
 
 This repository is the **design system**. The thing it designs is a sensor head, and that
 head is the first physical device in a governance architecture that until now existed only
-as software.
+as software. In that architecture's vocabulary (the same one
+[BROAD](https://github.com/toneron2/broad#where-it-sits) uses) the head is an **igent**: a
+device running the edge agent stack. Every igent talks to one cloud-side thing, the portal
+**igent.me**, and **BROAD** is the first service behind that portal.
 
 ```
         ┌──────────────────────────────────────────────┐
-        │  BROAD  —  healthcare agentic ERP in cloud    │
-        │  FHIR R4 · clinical pathways · access layer   │
-        │  governed by URGE, the formal policy engine   │
+        │  igent.me  —  the portal                      │
+        │  Security Agent at the edge · URGE gates      │
+        │  every call: ALLOW / DENY + reasoning trace   │
+        │            ──▶  BROAD, service #1             │
+        │  healthcare agentic ERP · FHIR R4 · pathways  │
         └──────────────────────────────────────────────┘
                           ▲   │
    Stream 0  heartbeat +  │   │  governance control     bidirectional, critical
@@ -45,10 +55,15 @@ as software.
                           │   ▲
         ┌──────────────────────────────────────────────┐
         │  Physicalized Agent  —  the sensor head       │
-        │  stereo vision · binaural MEMS in horns       │
-        │  local governance state machine (overrides)   │
+        │  an igent: stereo vision · binaural MEMS in   │
+        │  horns · local governance state machine       │
         └──────────────────────────────────────────────┘
 ```
+
+The January PRD names the cloud endpoint as "Google Cloud Run" and the 2025 BROAD documents
+call the same thing "the BROAD platform"; both mean the portal. Stream 0 is the articulation
+pathway in both directions: governance control comes down it carrying a verdict, and the
+head's own overrides and heartbeat go up it.
 
 **Determinism over probability.** The head calculates vectors, not guesses. Audio arrives as
 an azimuth, elevation and intensity derived from interaural time and level differences and a
@@ -69,18 +84,22 @@ means bidirectional streams and datagrams over UDP with TLS 1.3, independent str
 prioritisation, and no head-of-line blocking. A dropped video frame cannot delay a governance
 heartbeat. The cloud endpoint scales to zero while the heartbeat stays nominal.
 
-**Two halves, bound not merged.** The software half is here. The mechanical half — acoustic
-horn geometry, the concha mount, the head shell, the articulated neck — is a coordinated
-industrial design effort tracked separately, because a shared interface document beats a
-shared repository. The continuum-robot articulation this scaffold targets is the advanced
-variant; the frozen first specification uses a two-axis pan/tilt gimbal outside the head, with
-servo power never entering it.
+**Two halves, bound not merged.** The software half is here: the device, its firmware, its
+comms and the telemetry it speaks. The physical half — head, neck and base: acoustic horn
+geometry, the concha mount, the head shell, the articulation — is a separate industrial
+design effort, because a shared interface document beats a shared repository. The
+continuum-robot articulation this scaffold targets is the advanced variant; the
+[frozen first specification](docs/functional-spec-2026-02.md) uses a two-axis pan/tilt
+gimbal outside the head, with servo power never entering it. Whether the built device gets
+the gimbal or the neck is the physical half's open question, and the software half does not
+answer it.
 
 ---
 
 ## Table of Contents
 
 - [Where This Fits](#where-this-fits)
+- [Documents](#documents)
 - [Executive Summary](#executive-summary)
 - [The Innovation: Continuum Robot Sensor Head](#the-innovation-continuum-robot-sensor-head)
 - [Claude Code-Native Architecture](#claude-code-native-architecture)
@@ -94,13 +113,31 @@ servo power never entering it.
 
 ---
 
+## Documents
+
+What is specified, in the order it was written. Each file is as written on its date; the
+later ones supersede the earlier where they differ.
+
+| Document | Date | What it fixes |
+|---|---|---|
+| [`docs/prd-2026-01.md`](docs/prd-2026-01.md) | January 2026 | The product: why deterministic DSP over ML inference, the hybrid stereo pair, the binaural horns, the governance state machine, the four-stream transport, the acoustic enclosure |
+| [`docs/sensor-head-concept.jpg`](docs/sensor-head-concept.jpg) | January 2026 | The concept render above: the articulated target, not the frozen device |
+| [`docs/functional-spec-2026-02.md`](docs/functional-spec-2026-02.md) | February 2026, frozen | The first device: sensor head only, the ESP32-P4 as the sole compute element in the head, two cameras, two I²S microphones, two servos outside the head, one 5 V adapter into the base |
+| [`docs/bom-2026-02.csv`](docs/bom-2026-02.csv) | February 2026 | Six line items against that spec, with a manufacturer part number and a datasheet each. Where it differs from the PRD it is the later choice: Knowles SPH645LM4H-B microphones (the PRD says INMP441), MG90S servos |
+
+The rest of this README — the skills, the MCP servers, the pipeline, the continuum-robot
+mathematics — is the design system that produced those documents and is meant to produce the
+next ones.
+
+---
+
 ## Executive Summary
 
 The Physicalized Agent represents a new approach to healthcare sensing: **an articulated sensor head that can track and respond to its environment** using bio-inspired continuum robot mechanics.
 
 ### The Product: Articulated Healthcare Sensor Head
 
-Traditional camera mounts use rigid pan/tilt mechanisms. The Physicalized Agent uses a **Tendon-Driven Continuum Robot (TDCR) spine** — a flexible, segmented neck that moves like a biological structure:
+Traditional camera mounts use rigid pan/tilt mechanisms. The Physicalized Agent targets a **Tendon-Driven Continuum Robot (TDCR) spine** — a flexible, segmented neck that moves like a biological structure — as its articulated form. The frozen first device uses the pan/tilt gimbal (see [Hardware Architecture](#hardware-architecture)); the spine is what this design system exists to reach:
 
 - **Smooth, natural motion** via differential tendon tension
 - **Infinite poses** within the workspace (vs. discrete pan/tilt angles)
@@ -244,6 +281,18 @@ mcp-servers/
 
 ## Hardware Architecture
 
+Two hardware pictures exist and they are not the same device. **The frozen first
+specification** (February 2026, [`docs/functional-spec-2026-02.md`](docs/functional-spec-2026-02.md))
+is a sensor head with no actuation logic of its own: the ESP32-P4 is the only compute element
+in the head, two servos sit outside it in the base on a two-axis pan/tilt gimbal, PWM
+originates in the head, servo power never enters it, and one 5 V wall adapter feeds the base.
+Its six-line [BOM](docs/bom-2026-02.csv) is the parts list for that device. **The articulated
+target** below — the TDCR spine with three stepper-driven tendons — is what the skills and MCP
+servers in this repository are written to design, and it was deferred in July 2026 as
+probably a second product. Which one the built head gets, and what its neck and base are, is
+the physical half's question (see [Where This Fits](#where-this-fits)). The compute section
+holds for both; the actuation section is the target's.
+
 ### Compute & Control
 
 ```
@@ -255,13 +304,14 @@ mcp-servers/
 │  • MIPI-CSI → OV5647 (5MP Primary Camera)                          │
 │  • DVP → OV2640 (2MP Secondary Camera)                             │
 │  • I2S → INMP441 MEMS Microphones (x2)                             │
-│  • GPIO → A4988/TMC2209 Stepper Drivers (x3)                       │
+│  • MCPWM → 2 servos in the base (frozen spec)                      │
+│    GPIO → A4988/TMC2209 stepper drivers x3 (articulated target)    │
 │  • SDIO 3.0 → ESP32-C6 (Wi-Fi 6 Coprocessor)                       │
-│      └── WebTransport/QUIC → Cloud (GCP Cloud Run)                 │
+│      └── WebTransport/QUIC → igent.me, the portal                  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Actuation (Low-Cost Stepper Approach)
+### Actuation (the articulated target: low-cost stepper approach)
 
 ```
 Tendon Actuation via Rack-and-Pinion:
@@ -451,7 +501,11 @@ physicalized-agent/
 
 ## Bill of Materials
 
-### Target: ~$225 Total System
+**The frozen BOM is [`docs/bom-2026-02.csv`](docs/bom-2026-02.csv)**: six line items for the
+first device, each with a canonical part number and a datasheet. The table below is the
+estimate for the articulated target and includes the neck the frozen device does not have.
+
+### Articulated target: ~$225 Total System
 
 | Category | Component | Qty | Est. Cost |
 |----------|-----------|-----|-----------|
@@ -525,8 +579,8 @@ Detailed applicability analysis of the OpenCR-Hardware repository for this proje
 - [x] Project scaffolding with Claude Code skills
 - [x] Applicability analysis for OpenCR-Hardware
 - [x] Low-cost actuation design
-- [ ] MCP server interfaces
-- [ ] JSON schemas for manifests
+- [x] MCP server interfaces (three servers, TypeScript, `mcp-servers/`)
+- [x] JSON schemas for manifests (`schemas/`)
 
 ### Phase 2: Core Implementation
 - [ ] Kinematics skill with PCC model
@@ -544,7 +598,7 @@ Detailed applicability analysis of the OpenCR-Hardware repository for this proje
 - [ ] Audio source localization (ITD/ILD)
 - [ ] Visual tracking integration
 - [ ] Governance Engine state machine
-- [ ] WebTransport cloud telemetry
+- [ ] WebTransport telemetry to igent.me
 
 ---
 

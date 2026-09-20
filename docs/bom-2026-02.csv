@@ -1,0 +1,7 @@
+Item,Component,Canonical MPN,Manufacturer,Interface,Qty,Datasheet / Technical Reference,Notes
+1,ESP32-P4 Main Board,ESP32-P4-WIFI6,Waveshare,MCU / CSI / DVP / I2S,1,https://www.waveshare.com/wiki/ESP32-P4-WIFI6,Board-level reference incl. camera connectors
+2,CSI Camera Module,OV5647-CSI,OmniVision (module: Waveshare/Arducam),MIPI-CSI-2,1,https://www.ovt.com/products/ov5647/,Sensor datasheet + CSI timing
+3,DVP Camera Module,OV2640-DVP,OmniVision (module: Aideepen),Parallel DVP,1,https://www.ovt.com/products/ov2640/,Sensor datasheet + DVP bus definition
+4,Digital MEMS Microphone,SPH645LM4H-B,Knowles,I2S,2,https://www.knowles.com/docs/default-source/model-downloads/sph645lm4h.pdf,Electrical + I2S timing
+5,Micro Servo,MG90S,TowerPro,PWM,2,https://components101.com/sites/default/files/component_datasheet/MG90S-Datasheet.pdf,Mechanical + electrical
+6,AC Power Adapter,5V Regulated Supply,Generic / MeanWell class,DC Power,1,https://www.meanwell.com/webapp/product/search.aspx?prod=LRS-35-5,Reference class; exact SKU flexible
