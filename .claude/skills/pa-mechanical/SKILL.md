@@ -276,4 +276,4 @@ After generating designs, request visualization:
 
 ---
 
-*Good mechanical design is invisible — it simply works. Great mechanical design is also affordable.*
+*Mechanical design that works and stays within the cost ceiling is the goal.*
