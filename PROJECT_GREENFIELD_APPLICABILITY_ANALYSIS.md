@@ -7,24 +7,24 @@
 
 ## Executive Summary
 
-**REVISION NOTE:** Initial analysis incorrectly assessed the concept as a rigid 2-axis pan/tilt mechanism. The concept sketch clearly shows a **segmented, spine-like neck structure** that directly maps to OpenCR's **Tendon-Driven Continuum Robot (TDCR)** architecture. This dramatically increases applicability.
+**Revision note.** The first version of this analysis assessed the concept as a rigid two-axis pan/tilt mechanism. The concept sketch shows a segmented, spine-like neck, which maps to OpenCR's tendon-driven continuum robot (TDCR) architecture; the applicability figures below are for that reading. The frozen first specification (February 2026) nevertheless uses the two-axis gimbal; the neck is the articulated target.
 
-The OpenCR-Hardware repository provides a **well-documented, open-source platform for modular continuum robotics** developed by the Continuum Robotics Laboratory at the University of Toronto. Combined with adjacent control mathematics repositories, this provides a **near-complete foundation** for the Physicalized Agent's articulated neck.
+The OpenCR-Hardware repository provides a **well-documented, open-source platform for modular continuum robotics** developed by the Continuum Robotics Laboratory at the University of Toronto. Combined with adjacent control mathematics repositories, this provides most of the mechanical and control foundation for the Physicalized Agent's articulated neck.
 
 | Subsystem | Applicability | Reuse Potential | Notes |
 |-----------|---------------|-----------------|-------|
-| **Mechanical (Spine/Neck)** | **VERY HIGH** | 85-95% | TDCR spacer disks, backbone, tendon routing directly applicable |
-| **Actuation** | **HIGH** | 70-80% | Tendon actuation pattern reusable; motors replaceable with low-cost steppers |
-| **Control Mathematics** | **HIGH** | 60-70% | `tdcr-modeling` C++ library portable to ESP32 via ArduinoEigen |
-| **Electronics** | **LOW** | 20-30% | Different MCU ecosystem; patterns transferable |
-| **Sensors** | **NONE** | 0% | No camera/microphone components |
-| **Communication** | **NONE** | 0% | CAN bus vs. WebTransport; software adaptation required |
+| **Mechanical (Spine/Neck)** | Very high | 85-95% | TDCR spacer disks, backbone, tendon routing directly applicable |
+| **Actuation** | High | 70-80% | Tendon actuation pattern reusable; motors replaceable with low-cost steppers |
+| **Control Mathematics** | High | 60-70% | `tdcr-modeling` C++ library portable to ESP32 via ArduinoEigen |
+| **Electronics** | Low | 20-30% | Different MCU ecosystem; patterns transferable |
+| **Sensors** | None | 0% | No camera/microphone components |
+| **Communication** | None | 0% | CAN bus vs. WebTransport; software adaptation required |
 
 ---
 
-## Critical Insight: Spine-Neck = Continuum Robot
+## The neck is a continuum robot
 
-The concept sketch shows a **segmented, articulated neck** composed of ring-like segments - this IS a continuum robot structure:
+The concept sketch shows a **segmented, articulated neck** composed of ring-like segments, which is a continuum robot structure:
 
 ```
 Concept Sketch Analysis:
@@ -105,7 +105,7 @@ From `mechanics/LOTR_TDCR-spatial/`:
 **Rationale:** Tendon actuation requires **linear displacement** (pulling tendons). A rack-and-pinion mechanism driven by stepper motors provides:
 - Precise position control (steppers are inherently position-aware via step counting)
 - No encoder required (open-loop sufficient for tendon tension)
-- Dramatically lower cost
+- Lower cost
 - ESP32 native control via step/direction GPIO
 
 | Component | Qty | Unit Cost | Total | Source |

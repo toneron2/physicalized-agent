@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Physicalized Agent is a **Claude Code-native** autonomous framework for designing and building a healthcare sensor head with a tendon-driven continuum robot (TDCR) spine/neck. It uses Skills (not Python classes) as agents and MCP servers (not stub functions) as tools.
+Physicalized Agent is the design system for a healthcare sensor head, built on Claude Code: skills are the agents, MCP servers are the tools. The articulated target is a tendon-driven continuum robot (TDCR) neck; the frozen first specification is a two-axis gimbal outside the head.
 
 **Target Hardware:**
 - ESP32-P4-WIFI6-M primary MCU (edge computing, not ROS)
@@ -107,5 +107,5 @@ State is stored in `artifacts/state.json` (not SQLite). The Conductor reads/writ
 - **Cost ceiling**: ~$225 total BOM
 - **Actuation budget**: ~$54-69 (3x NEMA 17 + drivers + rack-and-pinion)
 - **Compute**: ESP32-P4-WIFI6-M (~$25)
-- **Sensors**: OV5647 + OV2640 + 2x INMP441 (~$33)
+- **Sensors**: OV5647 + OV2640 + 2x Knowles SPH645LM4H (the frozen BOM; the PRD says INMP441) (~$33)
 - **Mechanical**: NiTi backbone + Spectra tendons + 3D printed disks (~$78)
