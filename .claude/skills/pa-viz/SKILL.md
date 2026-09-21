@@ -201,7 +201,3 @@ When generating visualizations, produce:
 - **Matplotlib**: 2D plots (Python)
 - **Three.js**: Interactive WebGL (browser)
 - **FreeCAD**: Engineering documentation
-
----
-
-*A picture is worth a thousand words. An animation is worth a thousand pictures. Make complexity comprehensible.*

@@ -347,7 +347,3 @@ idf.py -p /dev/ttyUSB0 flash
 # Monitor
 idf.py -p /dev/ttyUSB0 monitor
 ```
-
----
-
-*Edge computing means no cloud dependency for core function. The robot thinks locally, reports globally.*
