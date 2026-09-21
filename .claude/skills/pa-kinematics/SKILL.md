@@ -210,7 +210,3 @@ The C++ implementation is derived from:
 - **Paper**: Rao et al., "How to Model Tendon-Driven Continuum Robots" (2021)
 
 Port the Piecewise Constant Curvature model, not the more complex Cosserat rod model, for real-time ESP32 performance.
-
----
-
-*Curvature is the language of flexible robots. Through mathematics, we command the spine.*

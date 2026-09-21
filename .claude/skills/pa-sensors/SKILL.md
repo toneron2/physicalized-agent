@@ -277,7 +277,3 @@ When configuring sensors, produce:
   }
 }
 ```
-
----
-
-*Perception is the foundation of intelligence. The robot that cannot sense cannot reason.*

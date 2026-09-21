@@ -177,7 +177,3 @@ User: "Design a sensor head with 45° bending range"
 9. Verify BOM ≤ $225
 10. Deliver to user
 ```
-
----
-
-*The Conductor sees the whole. The Conductor balances the constraints. The Conductor delivers within budget.*

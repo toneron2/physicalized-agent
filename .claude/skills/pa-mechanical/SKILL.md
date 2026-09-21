@@ -273,7 +273,3 @@ After generating designs, request visualization:
 2. **Cross-Section** — Cut view showing internal structure
 3. **Print Orientation** — Components arranged on build plate
 4. **Assembly Animation** — Step-by-step assembly sequence
-
----
-
-*Mechanical design that works and stays within the cost ceiling is the goal.*
