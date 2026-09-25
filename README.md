@@ -7,9 +7,9 @@ MCP servers written to produce the next ones.
 
 | | |
 |---|---|
-| **Status** | The sensor head is specified and not yet built. |
+| **Status** | Procurement in process. |
 | **Specified** | PRD, January 2026 · functional specification, February 2026 (frozen) · bill of materials, six line items |
-| **Compute** | Waveshare ESP32-P4-WIFI6: dual RISC-V at 400 MHz, 32 MB PSRAM, MIPI-CSI + DVP + I²S on chip, ESP32-C6 radio |
+| **Compute** | Frozen specification: Waveshare ESP32-P4-WIFI6. Prototype: Raspberry Pi 5 (4 GB), because no WebTransport client exists for the ESP32-P4; see [`docs/device/`](docs/device/) |
 | **Sensors** | OV5647 (5 MP, CSI) and OV2640 (2 MP, DVP) cameras; two Knowles SPH645LM4H MEMS microphones on I²S |
 | **Transport** | WebTransport over HTTP/3 (QUIC, TLS 1.3), four prioritised streams |
 | **Repository** | 6 skills, 3 MCP servers (TypeScript), 3 JSON schemas. No third-party source |

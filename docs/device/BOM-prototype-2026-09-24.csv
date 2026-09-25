@@ -1,0 +1,17 @@
+Line,Qty,Part,Vendor,Vendor ID,Unit price USD,Stock 2026-09-24,URL,Purpose,Notes
+1,1,Raspberry Pi 5 - 4 GB RAM,Adafruit,5812,130.00,in stock,https://www.adafruit.com/product/5812,compute,limit 2 per customer; 8 GB is 200.00 and not needed
+2,1,Official Raspberry Pi 5 Active Cooler,Adafruit,5815,13.50,in stock,https://www.adafruit.com/product/5815,heat,clips on; no tools
+3,1,Official Raspberry Pi 27W PD Power Supply 5.1V 5A USB-C,Adafruit,5814,14.04,in stock,https://www.adafruit.com/product/5814,logic power,
+4,1,Raspberry Pi Camera Module 3 - 120 degree Wide,Adafruit,5658,38.50,in stock,https://www.adafruit.com/product/5658,camera A (context),
+5,1,Raspberry Pi Camera Module 3 Standard (autofocus),Adafruit,5657,29.25,in stock,https://www.adafruit.com/product/5657,camera B (detail),
+6,2,Raspberry Pi 5 FPC Camera Cable 22-pin to 15-pin 200 mm,Adafruit,5818,2.70,in stock,https://www.adafruit.com/product/5818,camera to Pi 5,the cable in the camera box does not fit a Pi 5
+7,2,Adafruit I2S MEMS Microphone Breakout - SPH0645LM4H,Adafruit,3421,6.95,in stock,https://www.adafruit.com/product/3421,stereo audio,SOLDER the 6-pin header on each (12 joints); the only soldering in this list
+8,1,Adafruit VL53L1X Time of Flight Distance Sensor (STEMMA QT),Adafruit,3967,14.95,in stock,https://www.adafruit.com/product/3967,presence for gate G9,an addition to the frozen spec; optional
+9,1,STEMMA QT JST SH 4-pin cable to female sockets 150 mm,Adafruit,4397,0.95,in stock,https://www.adafruit.com/product/4397,ToF sensor to Pi header,
+10,1,5V 2A switching power supply (2.1 mm plug),Adafruit,276,7.95,in stock,https://www.adafruit.com/product/276,servo power,kept apart from logic power as the frozen spec requires
+11,1,Female DC power adapter 2.1 mm jack to screw terminal,Adafruit,368,2.00,in stock,https://www.adafruit.com/product/368,servo power distribution,
+12,1,Premium Female/Male jumper wires 20 x 6 in,Adafruit,1954,1.95,in stock,https://www.adafruit.com/product/1954,Pi header to servos and mics,
+13,1,Premium Male/Male jumper wires 20 x 6 in,Adafruit,1957,1.95,not read,https://www.adafruit.com/product/1957,terminal block to servo plugs,price not re-read on 2026-09-24
+14,2,MG90S metal-gear micro servo (TowerPro class),any,,8.00,,,pan and tilt (frozen BOM row 5),Adafruit's MG90D (1143) is out of stock; price is an estimate
+15,1,microSD card A2 class 32-64 GB,any,,13.00,,,boot and storage,the official Raspberry Pi cards (Adafruit 6010/6011) are out of stock; any A2 card works
+16,1,USB microSD reader,any,,8.00,,,flash the card on A6,only if A6 has no card slot
