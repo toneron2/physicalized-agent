@@ -64,10 +64,13 @@ Design a TDCR sensor head with [X] spacer disks and [Y] degree bending range
 
 ## Development
 
-**Building MCP servers:**
+**Building MCP servers** (npm workspaces; run from the repo root):
 ```bash
-cd mcp-servers/<server> && npm install && npm run build
+npm install && npm run build   # compiles mcp-servers/*/src to mcp-servers/*/dist
+npm test                       # builds, then runs mcp-servers/*/test/*.test.mjs
 ```
+Each server is an ES module (`"type": "module"`) compiled with `tsconfig.base.json`;
+`.claude/settings.json` points at the compiled `dist/index.js` files.
 
 **Adding new tools:**
 1. Add tool definition in `mcp-servers/<server>/src/index.ts`

@@ -1,0 +1,21 @@
+{
+  "name": "physicalized-agent",
+  "private": true,
+  "description": "Design system for a healthcare sensor head: skills are the agents, MCP servers are the tools",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "mcp-servers/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces",
+    "clean": "rm -rf mcp-servers/*/dist"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

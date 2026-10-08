@@ -283,4 +283,7 @@ async function main() {
   console.error("Hardware MCP server running");
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

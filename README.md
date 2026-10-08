@@ -102,7 +102,8 @@ Requires Claude Code with MCP support, Node.js 20+, and ESP-IDF 5.0+ for firmwar
 
 ```bash
 git clone https://github.com/toneron2/physicalized-agent.git && cd physicalized-agent
-for s in kinematics hardware simulation; do (cd mcp-servers/$s && npm install && npm run build); done
+npm install && npm run build   # all three MCP servers (npm workspaces)
+npm test                       # builds, then runs each server's tests
 ```
 
 Open Claude Code in the directory; the `.claude/` skills are detected. Example:
