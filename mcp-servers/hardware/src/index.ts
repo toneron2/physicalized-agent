@@ -6,167 +6,87 @@
  * - Sensor configuration
  * - GPIO assignment
  * - DSP pipeline setup
+ *
+ * Inputs are validated with zod before any code is generated; invalid input
+ * and unimplemented tools come back as `isError` results.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 
-const server = new Server(
+const server = new McpServer({ name: "hardware-server", version: "0.1.0" });
+
+function jsonResult(value: unknown) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] };
+}
+
+function errorResult(message: string) {
+  return { isError: true, content: [{ type: "text" as const, text: message }] };
+}
+
+// ESP32-P4 exposes GPIO0..GPIO54.
+const gpio = z.number().int().min(0).max(54);
+
+function hasDuplicates(pins: number[]): boolean {
+  return new Set(pins).size !== pins.length;
+}
+
+// Default pin assignments when the caller does not provide any.
+const DEFAULT_STEP_PINS = [4, 6, 8];
+const DEFAULT_DIR_PINS = [5, 7, 9];
+
+server.registerTool(
+  "generate_stepper_driver",
   {
-    name: "hardware-server",
-    version: "0.1.0",
-  },
-  {
-    capabilities: {
-      tools: {},
+    description: "Generate ESP-IDF stepper motor driver code",
+    inputSchema: {
+      num_steppers: z
+        .number()
+        .int()
+        .min(1)
+        .max(8)
+        .default(3)
+        .describe("Number of stepper motors"),
+      step_pins: z
+        .array(gpio)
+        .optional()
+        .describe("GPIO pins for step signals (one per stepper)"),
+      dir_pins: z
+        .array(gpio)
+        .optional()
+        .describe("GPIO pins for direction signals (one per stepper)"),
+      steps_per_mm: z
+        .number()
+        .positive()
+        .finite()
+        .default(80)
+        .describe("Steps per millimeter of tendon travel"),
     },
-  }
-);
+  },
+  async ({ num_steppers, step_pins, dir_pins, steps_per_mm }) => {
+    if (!step_pins !== !dir_pins) {
+      return errorResult("step_pins and dir_pins must be provided together.");
+    }
+    if (!step_pins && num_steppers > DEFAULT_STEP_PINS.length) {
+      return errorResult(
+        `Default pin assignments cover ${DEFAULT_STEP_PINS.length} steppers; pass step_pins and dir_pins for ${num_steppers}.`
+      );
+    }
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "generate_stepper_driver",
-        description: "Generate ESP-IDF stepper motor driver code",
-        inputSchema: {
-          type: "object",
-          properties: {
-            num_steppers: {
-              type: "integer",
-              description: "Number of stepper motors",
-              default: 3,
-            },
-            step_pins: {
-              type: "array",
-              items: { type: "integer" },
-              description: "GPIO pins for step signals",
-            },
-            dir_pins: {
-              type: "array",
-              items: { type: "integer" },
-              description: "GPIO pins for direction signals",
-            },
-            steps_per_mm: {
-              type: "number",
-              description: "Steps per millimeter of tendon travel",
-              default: 80,
-            },
-          },
-          required: ["num_steppers"],
-        },
-      },
-      {
-        name: "configure_camera",
-        description: "Generate camera configuration code for OV5647/OV2640",
-        inputSchema: {
-          type: "object",
-          properties: {
-            camera_type: {
-              type: "string",
-              enum: ["OV5647", "OV2640"],
-              description: "Camera sensor model",
-            },
-            interface: {
-              type: "string",
-              enum: ["MIPI-CSI", "DVP"],
-              description: "Camera interface type",
-            },
-            resolution: {
-              type: "string",
-              enum: ["VGA", "SVGA", "HD", "FHD", "5MP"],
-              description: "Target resolution",
-            },
-          },
-          required: ["camera_type", "interface"],
-        },
-      },
-      {
-        name: "configure_microphone",
-        description: "Generate I2S microphone configuration for INMP441",
-        inputSchema: {
-          type: "object",
-          properties: {
-            num_mics: {
-              type: "integer",
-              description: "Number of microphones",
-              default: 2,
-            },
-            sample_rate: {
-              type: "integer",
-              description: "Sample rate in Hz",
-              default: 16000,
-            },
-            ws_pin: {
-              type: "integer",
-              description: "Word select GPIO pin",
-            },
-            bclk_pin: {
-              type: "integer",
-              description: "Bit clock GPIO pin",
-            },
-            din_pin: {
-              type: "integer",
-              description: "Data input GPIO pin",
-            },
-          },
-          required: ["num_mics"],
-        },
-      },
-      {
-        name: "generate_dsp_pipeline",
-        description: "Generate audio DSP pipeline for source localization",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sample_rate: {
-              type: "integer",
-              description: "Sample rate in Hz",
-              default: 16000,
-            },
-            fft_size: {
-              type: "integer",
-              description: "FFT window size",
-              default: 512,
-            },
-            enable_itd: {
-              type: "boolean",
-              description: "Enable Interaural Time Difference",
-              default: true,
-            },
-            enable_ild: {
-              type: "boolean",
-              description: "Enable Interaural Level Difference",
-              default: true,
-            },
-          },
-        },
-      },
-    ],
-  };
-});
+    const stepPins = step_pins ?? DEFAULT_STEP_PINS.slice(0, num_steppers);
+    const dirPins = dir_pins ?? DEFAULT_DIR_PINS.slice(0, num_steppers);
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+    if (stepPins.length !== num_steppers || dirPins.length !== num_steppers) {
+      return errorResult(
+        `Expected ${num_steppers} step_pins and ${num_steppers} dir_pins, got ${stepPins.length} and ${dirPins.length}.`
+      );
+    }
+    if (hasDuplicates([...stepPins, ...dirPins])) {
+      return errorResult("step_pins and dir_pins must all be distinct GPIO numbers.");
+    }
 
-  switch (name) {
-    case "generate_stepper_driver": {
-      const { num_steppers, step_pins, dir_pins, steps_per_mm = 80 } = args as {
-        num_steppers: number;
-        step_pins?: number[];
-        dir_pins?: number[];
-        steps_per_mm?: number;
-      };
-
-      // Default pin assignments if not provided
-      const defaultStepPins = [4, 6, 8];
-      const defaultDirPins = [5, 7, 9];
-
-      const code = `
+    const code = `
 // Auto-generated stepper driver for ${num_steppers} motors
 // Steps per mm: ${steps_per_mm}
 
@@ -177,12 +97,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 #define STEPS_PER_MM ${steps_per_mm}
 
 static stepper_t steppers[NUM_STEPPERS] = {
-${Array(num_steppers)
-  .fill(0)
+${stepPins
   .map(
-    (_, i) => `    {
-        .step_pin = GPIO_NUM_${(step_pins || defaultStepPins)[i]},
-        .dir_pin = GPIO_NUM_${(dir_pins || defaultDirPins)[i]},
+    (stepPin, i) => `    {
+        .step_pin = GPIO_NUM_${stepPin},
+        .dir_pin = GPIO_NUM_${dirPins[i]},
         .position = 0,
         .step_delay_us = 500
     }`
@@ -202,36 +121,61 @@ void steppers_move_tendon_mm(int index, float mm) {
 }
 `;
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                code,
-                gpio_assignments: {
-                  step_pins: step_pins || defaultStepPins.slice(0, num_steppers),
-                  dir_pins: dir_pins || defaultDirPins.slice(0, num_steppers),
-                },
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
+    return jsonResult({
+      code,
+      gpio_assignments: { step_pins: stepPins, dir_pins: dirPins },
+    });
+  }
+);
+
+server.registerTool(
+  "configure_camera",
+  {
+    description: "Generate camera configuration code for OV5647/OV2640",
+    inputSchema: {
+      camera_type: z.enum(["OV5647", "OV2640"]).describe("Camera sensor model"),
+      interface: z.enum(["MIPI-CSI", "DVP"]).describe("Camera interface type"),
+      resolution: z
+        .enum(["VGA", "SVGA", "HD", "FHD", "5MP"])
+        .optional()
+        .describe("Target resolution"),
+    },
+  },
+  async () =>
+    errorResult(
+      "configure_camera is not implemented yet: no esp_cam / CSI configuration generator exists."
+    )
+);
+
+server.registerTool(
+  "configure_microphone",
+  {
+    description: "Generate I2S microphone configuration for INMP441",
+    inputSchema: {
+      num_mics: z
+        .number()
+        .int()
+        .min(1)
+        .max(2)
+        .default(2)
+        .describe("Number of microphones on the I2S bus (one stereo bus, max 2)"),
+      sample_rate: z
+        .number()
+        .int()
+        .positive()
+        .default(16000)
+        .describe("Sample rate in Hz"),
+      ws_pin: gpio.default(10).describe("Word select GPIO pin"),
+      bclk_pin: gpio.default(11).describe("Bit clock GPIO pin"),
+      din_pin: gpio.default(12).describe("Data input GPIO pin"),
+    },
+  },
+  async ({ num_mics, sample_rate, ws_pin, bclk_pin, din_pin }) => {
+    if (hasDuplicates([ws_pin, bclk_pin, din_pin])) {
+      return errorResult("ws_pin, bclk_pin and din_pin must be distinct GPIO numbers.");
     }
 
-    case "configure_microphone": {
-      const { num_mics, sample_rate = 16000, ws_pin = 10, bclk_pin = 11, din_pin = 12 } = args as {
-        num_mics: number;
-        sample_rate?: number;
-        ws_pin?: number;
-        bclk_pin?: number;
-        din_pin?: number;
-      };
-
-      const config = `
+    const config = `
 // I2S configuration for ${num_mics}x INMP441 microphones
 #include "driver/i2s_std.h"
 
@@ -255,27 +199,26 @@ i2s_std_config_t std_cfg = {
 };
 `;
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ config, sample_rate, num_mics }, null, 2),
-          },
-        ],
-      };
-    }
-
-    default:
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Tool '${name}' not yet implemented`,
-          },
-        ],
-      };
+    return jsonResult({ config, sample_rate, num_mics });
   }
-});
+);
+
+server.registerTool(
+  "generate_dsp_pipeline",
+  {
+    description: "Generate audio DSP pipeline for source localization",
+    inputSchema: {
+      sample_rate: z.number().int().positive().default(16000).describe("Sample rate in Hz"),
+      fft_size: z.number().int().positive().default(512).describe("FFT window size"),
+      enable_itd: z.boolean().default(true).describe("Enable Interaural Time Difference"),
+      enable_ild: z.boolean().default(true).describe("Enable Interaural Level Difference"),
+    },
+  },
+  async () =>
+    errorResult(
+      "generate_dsp_pipeline is not implemented yet: no ITD/ILD pipeline generator exists."
+    )
+);
 
 async function main() {
   const transport = new StdioServerTransport();
