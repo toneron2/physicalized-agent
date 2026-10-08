@@ -10,8 +10,7 @@ allowed-tools:
   - Bash
   - mcp__simulation__render_3d
   - mcp__simulation__animate_motion
-  - mcp__simulation__plot_workspace
-  - mcp__simulation__generate_assembly_guide
+  - mcp__kinematics__workspace_analysis
 ---
 
 # PA-Viz: The Visual Architect
