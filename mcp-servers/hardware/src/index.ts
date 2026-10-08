@@ -32,6 +32,22 @@ function hasDuplicates(pins: number[]): boolean {
   return new Set(pins).size !== pins.length;
 }
 
+/** I2S MEMS microphone parts the generator knows. Both are 32-bit-slot, MSB-first Philips I2S. */
+const MIC_PARTS = {
+  INMP441: {
+    description: "InvenSense INMP441 (PRD part)",
+    data_bits: 24,
+    select_pin_name: "L/R",
+  },
+  SPH645LM4H: {
+    description: "Knowles SPH645LM4H-B (frozen BOM part)",
+    data_bits: 18,
+    select_pin_name: "SELECT",
+  },
+} as const;
+
+type MicPart = keyof typeof MIC_PARTS;
+
 // Default pin assignments when the caller does not provide any.
 const DEFAULT_STEP_PINS = [4, 6, 8];
 const DEFAULT_DIR_PINS = [5, 7, 9];
@@ -259,8 +275,13 @@ server.registerTool(
 server.registerTool(
   "configure_microphone",
   {
-    description: "Generate I2S microphone configuration for INMP441",
+    description:
+      "Generate ESP-IDF I2S configuration for the digital MEMS microphones (INMP441 per the PRD, or Knowles SPH645LM4H per the frozen BOM)",
     inputSchema: {
+      part: z
+        .enum(["INMP441", "SPH645LM4H"])
+        .default("INMP441")
+        .describe("Microphone part: INMP441 (24-bit data) or SPH645LM4H (18-bit data)"),
       num_mics: z
         .number()
         .int()
@@ -279,15 +300,26 @@ server.registerTool(
       din_pin: gpio.default(12).describe("Data input GPIO pin"),
     },
   },
-  async ({ num_mics, sample_rate, ws_pin, bclk_pin, din_pin }) => {
+  async ({ part, num_mics, sample_rate, ws_pin, bclk_pin, din_pin }) => {
     if (hasDuplicates([ws_pin, bclk_pin, din_pin])) {
       return errorResult("ws_pin, bclk_pin and din_pin must be distinct GPIO numbers.");
     }
 
+    const mic = MIC_PARTS[part as MicPart];
+    const slotNote =
+      num_mics === 2
+        ? `Tie one microphone's ${mic.select_pin_name} pin low (left slot) and the other's high (right slot).`
+        : `Tie the microphone's ${mic.select_pin_name} pin low to place it in the left slot.`;
+
     const config = `
-// I2S configuration for ${num_mics}x INMP441 microphones
+// I2S configuration for ${num_mics}x ${mic.description}
+// ${slotNote}
+// Samples arrive MSB-first in a 32-bit slot with ${mic.data_bits} significant bits;
+// shift each int32_t right by (32 - MIC_DATA_BITS) to get signed PCM.
 #include "driver/i2s_std.h"
 
+#define MIC_PART "${part}"
+#define MIC_DATA_BITS ${mic.data_bits}
 #define SAMPLE_RATE ${sample_rate}
 #define I2S_WS_PIN GPIO_NUM_${ws_pin}
 #define I2S_BCLK_PIN GPIO_NUM_${bclk_pin}
@@ -308,7 +340,14 @@ i2s_std_config_t std_cfg = {
 };
 `;
 
-    return jsonResult({ config, sample_rate, num_mics });
+    return jsonResult({
+      config,
+      part,
+      data_bits: mic.data_bits,
+      select_pin: mic.select_pin_name,
+      sample_rate,
+      num_mics,
+    });
   }
 );
 
