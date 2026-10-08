@@ -13,6 +13,17 @@ test("hardware tools validate input and report unimplemented tools", async (t) =
       assert.doesNotMatch(json.code, /undefined/);
     });
 
+    await t.test("emits the header the driver source includes", async () => {
+      const { json } = await callJson(client, "generate_stepper_driver", {});
+      assert.ok(json.files["stepper_driver.h"].includes("typedef struct"));
+      for (const fn of ["stepper_init", "stepper_move_relative", "stepper_move_absolute", "steppers_move_tendon_mm"]) {
+        assert.ok(json.files["stepper_driver.h"].includes(`esp_err_t ${fn}(`), `${fn} declared`);
+        assert.ok(json.files["stepper_driver.c"].includes(`esp_err_t ${fn}(`), `${fn} defined`);
+      }
+      assert.ok(json.files["stepper_driver.c"].includes(".enable_pin = GPIO_NUM_NC"));
+      assert.equal(json.files["stepper_driver.c"], json.code);
+    });
+
     await t.test("refuses more steppers than default pins without explicit pins", async () => {
       const { result, text } = await callJson(client, "generate_stepper_driver", { num_steppers: 4 });
       assert.equal(result.isError, true);
