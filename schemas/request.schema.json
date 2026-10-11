@@ -124,23 +124,6 @@
           "description": "Total spine length in mm"
         }
       }
-    },
-    "kinematics_input": {
-      "type": "object",
-      "properties": {
-        "kappa": {
-          "type": "number",
-          "description": "Curvature in 1/m"
-        },
-        "phi": {
-          "type": "number",
-          "description": "Bending plane angle in radians"
-        },
-        "s": {
-          "type": "number",
-          "description": "Arc length in m"
-        }
-      }
     }
   }
 }

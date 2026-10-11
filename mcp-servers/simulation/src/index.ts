@@ -64,10 +64,30 @@ server.registerTool(
     errorResult("analyze_printability is not implemented yet: no STL mesh analysis exists.")
 );
 
+interface BomLine {
+  description: string;
+  quantity: number;
+  unit_cost: number;
+  total: number;
+}
+
+/** A BOM line whose total is always quantity × unit cost. */
+function line(description: string, quantity: number, unit_cost: number): BomLine {
+  return { description, quantity, unit_cost, total: round2(quantity * unit_cost) };
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function sectionTotal(section: Record<string, BomLine>): number {
+  return round2(Object.values(section).reduce((sum, item) => sum + item.total, 0));
+}
+
 server.registerTool(
   "calculate_bom",
   {
-    description: "Calculate bill of materials and cost",
+    description: "Calculate bill of materials and cost for the TDCR spine reference design",
     inputSchema: {
       disk_count: z.number().int().min(1).describe("Number of spacer disks"),
       backbone_length_mm: z
@@ -79,144 +99,60 @@ server.registerTool(
         .boolean()
         .default(true)
         .describe("Include electronics in BOM"),
+      target_budget_usd: z
+        .number()
+        .positive()
+        .finite()
+        .default(225)
+        .describe("Budget the total is checked against"),
     },
   },
-  async ({ disk_count, backbone_length_mm, include_electronics }) => {
-    const bom = {
-      mechanical: {
-        niti_backbone: {
-          description: `NiTi tube 1.4mm OD x ${backbone_length_mm}mm`,
-          quantity: 1,
-          unit_cost: 15.0,
-          total: 15.0,
-        },
-        spectra_tendon: {
-          description: "Spectra fiber (McMaster 9442T4)",
-          quantity: 1,
-          unit_cost: 10.0,
-          total: 10.0,
-        },
-        v_groove_pulleys: {
-          description: "V-groove pulleys V623ZZ",
-          quantity: 6,
-          unit_cost: 1.33,
-          total: 8.0,
-        },
-        ball_bearings: {
-          description: "Ball bearings for disks",
-          quantity: disk_count + 5,
-          unit_cost: 1.36,
-          total: (disk_count + 5) * 1.36,
-        },
-        hardware: {
-          description: "M3 hardware kit",
-          quantity: 1,
-          unit_cost: 10.0,
-          total: 10.0,
-        },
-        printed_parts: {
-          description: `3D printed parts (~${disk_count * 8 + 150}g PLA)`,
-          quantity: 1,
-          unit_cost: 0.1 * (disk_count * 8 + 150),
-          total: 0.1 * (disk_count * 8 + 150),
-        },
-      },
-      actuation: {
-        nema17_steppers: {
-          description: "NEMA 17 stepper motors",
-          quantity: 3,
-          unit_cost: 10.0,
-          total: 30.0,
-        },
-        stepper_drivers: {
-          description: "A4988/TMC2209 drivers",
-          quantity: 3,
-          unit_cost: 3.0,
-          total: 9.0,
-        },
-        rack_pinion: {
-          description: "Rack and pinion sets",
-          quantity: 3,
-          unit_cost: 5.0,
-          total: 15.0,
-        },
-        linear_rails: {
-          description: "MGN9 linear rails",
-          quantity: 3,
-          unit_cost: 5.0,
-          total: 15.0,
-        },
-      },
-      electronics: include_electronics
-        ? {
-            esp32_p4: {
-              description: "ESP32-P4-WIFI6-M",
-              quantity: 1,
-              unit_cost: 25.0,
-              total: 25.0,
-            },
-            ov5647_camera: {
-              description: "OV5647 5MP MIPI camera",
-              quantity: 1,
-              unit_cost: 15.0,
-              total: 15.0,
-            },
-            ov2640_camera: {
-              description: "OV2640 2MP DVP camera",
-              quantity: 1,
-              unit_cost: 10.0,
-              total: 10.0,
-            },
-            inmp441_mics: {
-              description: "INMP441 MEMS microphones",
-              quantity: 2,
-              unit_cost: 4.0,
-              total: 8.0,
-            },
-          }
-        : {},
-      acoustic: {
-        horn_elements: {
-          description: "Custom acoustic horn material",
-          quantity: 1,
-          unit_cost: 20.0,
-          total: 20.0,
-        },
-      },
+  async ({ disk_count, backbone_length_mm, include_electronics, target_budget_usd }) => {
+    const printed_grams = disk_count * 8 + 150;
+
+    const mechanical: Record<string, BomLine> = {
+      niti_backbone: line(`NiTi tube 1.4mm OD x ${backbone_length_mm}mm`, 1, 15.0),
+      spectra_tendon: line("Spectra fiber (McMaster 9442T4)", 1, 10.0),
+      v_groove_pulleys: line("V-groove pulleys V623ZZ", 6, 1.33),
+      ball_bearings: line("Ball bearings for disks", disk_count + 5, 1.36),
+      hardware: line("M3 hardware kit", 1, 10.0),
+      printed_parts: line(`3D printed parts (~${printed_grams}g PLA)`, printed_grams, 0.1),
+    };
+    const actuation: Record<string, BomLine> = {
+      nema17_steppers: line("NEMA 17 stepper motors", 3, 10.0),
+      stepper_drivers: line("A4988/TMC2209 drivers", 3, 3.0),
+      rack_pinion: line("Rack and pinion sets", 3, 5.0),
+      linear_rails: line("MGN9 linear rails", 3, 5.0),
+    };
+    const electronics: Record<string, BomLine> = include_electronics
+      ? {
+          esp32_p4: line("ESP32-P4-WIFI6-M", 1, 25.0),
+          ov5647_camera: line("OV5647 5MP MIPI camera", 1, 15.0),
+          ov2640_camera: line("OV2640 2MP DVP camera", 1, 10.0),
+          inmp441_mics: line("INMP441 MEMS microphones", 2, 4.0),
+        }
+      : {};
+    const acoustic: Record<string, BomLine> = {
+      horn_elements: line("Custom acoustic horn material", 1, 20.0),
     };
 
-    // Calculate totals
-    const mechanical_total = Object.values(bom.mechanical).reduce(
-      (sum: number, item: any) => sum + item.total,
-      0
-    );
-    const actuation_total = Object.values(bom.actuation).reduce(
-      (sum: number, item: any) => sum + item.total,
-      0
-    );
-    const electronics_total = include_electronics
-      ? Object.values(bom.electronics).reduce(
-          (sum: number, item: any) => sum + item.total,
-          0
-        )
-      : 0;
-    const acoustic_total = Object.values(bom.acoustic).reduce(
-      (sum: number, item: any) => sum + item.total,
-      0
-    );
-
-    const grand_total = mechanical_total + actuation_total + electronics_total + acoustic_total;
+    const mechanical_usd = sectionTotal(mechanical);
+    const actuation_usd = sectionTotal(actuation);
+    const electronics_usd = sectionTotal(electronics);
+    const acoustic_usd = sectionTotal(acoustic);
+    const total_usd = round2(mechanical_usd + actuation_usd + electronics_usd + acoustic_usd);
 
     return jsonResult({
-      bom,
+      bom: { mechanical, actuation, electronics, acoustic },
       summary: {
-        mechanical_usd: mechanical_total.toFixed(2),
-        actuation_usd: actuation_total.toFixed(2),
-        electronics_usd: electronics_total.toFixed(2),
-        acoustic_usd: acoustic_total.toFixed(2),
-        total_usd: grand_total.toFixed(2),
-        within_budget: grand_total <= 225,
-        target_budget_usd: 225,
+        mechanical_usd,
+        actuation_usd,
+        electronics_usd,
+        acoustic_usd,
+        total_usd,
+        target_budget_usd,
+        within_budget: total_usd <= target_budget_usd,
+        margin_usd: round2(target_budget_usd - total_usd),
       },
     });
   }

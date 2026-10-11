@@ -123,49 +123,78 @@ server.registerTool(
   }
 );
 
+/** Hard cap on κ samples so a careless resolution cannot pin the server. */
+const MAX_RESOLUTION = 10000;
+
 server.registerTool(
   "workspace_analysis",
   {
-    description: "Analyze reachable workspace for given parameters",
+    description:
+      "Analyze the reachable workspace of a single segment: axis-aligned bounds, maximum lateral deflection, and optionally the bend profile. Sweeps κ from 0 to kappa_max; because φ spans the full circle the bounds are symmetric about the backbone.",
     inputSchema: {
       s: arcLength,
       kappa_max: z.number().positive().finite().describe("Maximum curvature in 1/m"),
       resolution: z
         .number()
         .int()
-        .min(1)
+        .min(2)
+        .max(MAX_RESOLUTION)
         .default(20)
-        .describe("Number of sample points per dimension"),
+        .describe(`Number of curvature samples between 0 and kappa_max (max ${MAX_RESOLUTION})`),
+      include_profile: z
+        .boolean()
+        .default(false)
+        .describe("Also return the per-sample bend profile (bend angle, lateral and axial reach)"),
     },
   },
-  async ({ s, kappa_max, resolution }) => {
-    // Sample workspace
-    const points: [number, number, number][] = [];
-    for (let ki = 0; ki <= resolution; ki++) {
-      const kappa = (ki / resolution) * kappa_max;
-      for (let pi = 0; pi < resolution * 2; pi++) {
-        const phi = (pi / resolution) * Math.PI;
+  async ({ s, kappa_max, resolution, include_profile }) => {
+    // One pass over κ with running extrema: O(resolution) time, O(1) memory.
+    // For each κ the tip sits at lateral radius L(κ) and height A(κ); sweeping
+    // φ over 2π turns that into the circle x² + y² = L², z = A, so the bounds
+    // follow from L and A alone and the φ loop is unnecessary.
+    let max_lateral = 0;
+    let max_lateral_kappa = 0;
+    let min_axial = Infinity;
+    let max_axial = -Infinity;
+    const profile: { kappa: number; bend_angle_deg: number; lateral_mm: number; axial_mm: number }[] = [];
 
-        points.push(pccPosition(kappa, phi, s));
+    for (let i = 0; i <= resolution; i++) {
+      const kappa = (i / resolution) * kappa_max;
+      const [lateral, , axial] = pccPosition(kappa, 0, s);
+      if (lateral > max_lateral) {
+        max_lateral = lateral;
+        max_lateral_kappa = kappa;
+      }
+      if (axial < min_axial) min_axial = axial;
+      if (axial > max_axial) max_axial = axial;
+      if (include_profile) {
+        profile.push({
+          kappa: round(kappa, 6),
+          bend_angle_deg: round((kappa * s * 180) / Math.PI, 2),
+          lateral_mm: round(lateral * 1000, 3),
+          axial_mm: round(axial * 1000, 3),
+        });
       }
     }
 
-    // Calculate bounds
-    const xs = points.map((p) => p[0]);
-    const ys = points.map((p) => p[1]);
-    const zs = points.map((p) => p[2]);
+    const max_bend_deg = (kappa_max * s * 180) / Math.PI;
+    const lateral_mm = round(max_lateral * 1000, 3);
 
     return jsonResult({
-      num_points: points.length,
-      bounds: {
-        x: [Math.min(...xs) * 1000, Math.max(...xs) * 1000],
-        y: [Math.min(...ys) * 1000, Math.max(...ys) * 1000],
-        z: [Math.min(...zs) * 1000, Math.max(...zs) * 1000],
+      samples: resolution + 1,
+      bounds_mm: {
+        x: [-lateral_mm, lateral_mm],
+        y: [-lateral_mm, lateral_mm],
+        z: [round(min_axial * 1000, 3), round(max_axial * 1000, 3)],
       },
-      max_reach_mm: (s * 1000).toFixed(1),
-      max_lateral_deflection_mm: (
-        Math.max(Math.max(...xs), Math.max(...ys)) * 1000
-      ).toFixed(1),
+      max_reach_mm: round(s * 1000, 3),
+      max_bend_deg: round(max_bend_deg, 2),
+      max_lateral_deflection_mm: lateral_mm,
+      max_lateral_deflection_at_kappa: round(max_lateral_kappa, 6),
+      ...(max_bend_deg > 180
+        ? { warning: "kappa_max · s exceeds 180°; the tip curls back toward the base." }
+        : {}),
+      ...(include_profile ? { profile } : {}),
     });
   }
 );
