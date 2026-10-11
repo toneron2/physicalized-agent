@@ -118,5 +118,5 @@ State is stored in `artifacts/state.json` (not SQLite). The Conductor reads/writ
 - **Cost ceiling**: ~$225 total BOM
 - **Actuation budget**: ~$54-69 (3x NEMA 17 + drivers + rack-and-pinion)
 - **Compute**: ESP32-P4-WIFI6-M (~$25)
-- **Sensors**: OV5647 + OV2640 + 2x Knowles SPH645LM4H (the frozen BOM; the PRD says INMP441) (~$33)
+- **Sensors**: OV5647 + OV2640 + 2x Knowles SPH0645LM4H-B (the frozen BOM spells it SPH645LM4H-B; the PRD says INMP441) (~$33)
 - **Mechanical**: NiTi backbone + Spectra tendons + 3D printed disks (~$78)

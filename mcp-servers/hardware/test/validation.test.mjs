@@ -57,19 +57,33 @@ test("hardware tools validate input and report unimplemented tools", async (t) =
       assert.equal(json.num_mics, 2);
       assert.equal(json.part, "INMP441");
       assert.equal(json.data_bits, 24);
+      assert.equal(json.sample_rate, 16000);
       assert.match(json.config, /GPIO_NUM_12/);
       assert.match(json.config, /#define MIC_DATA_BITS 24/);
       assert.match(json.config, /L\/R pin low/);
     });
 
     await t.test("configures the Knowles part from the frozen BOM", async () => {
-      const { result, json } = await callJson(client, "configure_microphone", { part: "SPH645LM4H", num_mics: 1 });
+      const { result, json } = await callJson(client, "configure_microphone", { part: "SPH0645LM4H-B", num_mics: 1 });
       assert.notEqual(result.isError, true);
-      assert.equal(json.part, "SPH645LM4H");
+      assert.equal(json.part, "SPH0645LM4H-B");
+      assert.equal(json.sample_rate, 48000);
       assert.equal(json.data_bits, 18);
       assert.equal(json.select_pin, "SELECT");
       assert.match(json.config, /#define MIC_DATA_BITS 18/);
       assert.match(json.config, /SELECT pin low to place it in the left slot/);
+    });
+
+    await t.test("keeps the Knowles part inside its 32 to 64 kHz clock range", async () => {
+      for (const sample_rate of [16000, 31999, 64001]) {
+        const { result } = await callJson(client, "configure_microphone", { part: "SPH0645LM4H-B", sample_rate });
+        assert.equal(result.isError, true, `${sample_rate} Hz should be rejected`);
+      }
+      for (const sample_rate of [32000, 64000]) {
+        const { result, json } = await callJson(client, "configure_microphone", { part: "SPH0645LM4H-B", sample_rate });
+        assert.notEqual(result.isError, true);
+        assert.match(json.config, new RegExp(`#define SAMPLE_RATE ${sample_rate}`));
+      }
     });
 
     await t.test("rejects an unknown microphone part", async () => {
