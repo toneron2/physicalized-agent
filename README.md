@@ -10,7 +10,7 @@ MCP servers written to produce the next ones.
 | **Status** | Procurement in process. |
 | **Specified** | PRD, January 2026 · functional specification, February 2026 (frozen) · bill of materials, six line items |
 | **Compute** | Frozen specification: Waveshare ESP32-P4-WIFI6. Prototype: Raspberry Pi 5 (4 GB), because no WebTransport client exists for the ESP32-P4; see [`docs/device/`](docs/device/) |
-| **Sensors** | OV5647 (5 MP, CSI) and OV2640 (2 MP, DVP) cameras; two Knowles SPH645LM4H MEMS microphones on I²S |
+| **Sensors** | OV5647 (5 MP, CSI) and OV2640 (2 MP, DVP) cameras; two Knowles SPH0645LM4H-B MEMS microphones on I²S |
 | **Transport** | WebTransport over HTTP/3 (QUIC, TLS 1.3), four prioritised streams |
 | **Repository** | 6 skills, 3 MCP servers (TypeScript), 3 JSON schemas. No third-party source |
 | **Licence** | MIT |
@@ -99,6 +99,8 @@ in July 2026 as probably a second product; the frozen device has no neck.
 ## Getting started
 
 Requires Claude Code with MCP support, Node.js 20+, and ESP-IDF 5.0+ for firmware work.
+The `hardware` server generates ESP-IDF code for the ESP32-P4 of the frozen specification
+(GPIO 0 to 54); the Raspberry Pi 5 prototype in [`docs/device/`](docs/device/) is not one of its targets.
 
 ```bash
 git clone https://github.com/toneron2/physicalized-agent.git && cd physicalized-agent

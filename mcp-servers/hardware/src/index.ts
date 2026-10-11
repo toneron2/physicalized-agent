@@ -32,17 +32,25 @@ function hasDuplicates(pins: number[]): boolean {
   return new Set(pins).size !== pins.length;
 }
 
-/** I2S MEMS microphone parts the generator knows. Both are 32-bit-slot, MSB-first Philips I2S. */
+/**
+ * I2S MEMS microphone parts the generator knows. Both are 32-bit-slot, MSB-first Philips I2S.
+ * The SPH0645LM4H-B runs at a fixed 64x oversampling from a 2.048 to 4.096 MHz clock, so its
+ * sample rate is 32 to 64 kHz (Knowles datasheet, Rev B).
+ */
 const MIC_PARTS = {
   INMP441: {
     description: "InvenSense INMP441 (PRD part)",
     data_bits: 24,
     select_pin_name: "L/R",
+    default_sample_rate: 16000,
+    sample_rate_range: undefined,
   },
-  SPH645LM4H: {
-    description: "Knowles SPH645LM4H-B (frozen BOM part)",
+  "SPH0645LM4H-B": {
+    description: "Knowles SPH0645LM4H-B (frozen BOM part; Adafruit 3421 breakout)",
     data_bits: 18,
     select_pin_name: "SELECT",
+    default_sample_rate: 48000,
+    sample_rate_range: [32000, 64000],
   },
 } as const;
 
@@ -276,12 +284,12 @@ server.registerTool(
   "configure_microphone",
   {
     description:
-      "Generate ESP-IDF I2S configuration for the digital MEMS microphones (INMP441 per the PRD, or Knowles SPH645LM4H per the frozen BOM)",
+      "Generate ESP-IDF I2S configuration for the digital MEMS microphones (INMP441 per the PRD, or Knowles SPH0645LM4H-B per the frozen BOM)",
     inputSchema: {
       part: z
-        .enum(["INMP441", "SPH645LM4H"])
+        .enum(["INMP441", "SPH0645LM4H-B"])
         .default("INMP441")
-        .describe("Microphone part: INMP441 (24-bit data) or SPH645LM4H (18-bit data)"),
+        .describe("Microphone part: INMP441 (24-bit data) or SPH0645LM4H-B (18-bit data)"),
       num_mics: z
         .number()
         .int()
@@ -293,8 +301,8 @@ server.registerTool(
         .number()
         .int()
         .positive()
-        .default(16000)
-        .describe("Sample rate in Hz"),
+        .optional()
+        .describe("Sample rate in Hz: default 16000 for the INMP441, 48000 for the SPH0645LM4H-B (32000 to 64000)"),
       ws_pin: gpio.default(10).describe("Word select GPIO pin"),
       bclk_pin: gpio.default(11).describe("Bit clock GPIO pin"),
       din_pin: gpio.default(12).describe("Data input GPIO pin"),
@@ -306,6 +314,12 @@ server.registerTool(
     }
 
     const mic = MIC_PARTS[part as MicPart];
+    sample_rate ??= mic.default_sample_rate;
+    if (mic.sample_rate_range && (sample_rate < mic.sample_rate_range[0] || sample_rate > mic.sample_rate_range[1])) {
+      return errorResult(
+        `The ${part} supports ${mic.sample_rate_range[0]} to ${mic.sample_rate_range[1]} Hz; ${sample_rate} Hz is outside its clock range.`
+      );
+    }
     const slotNote =
       num_mics === 2
         ? `Tie one microphone's ${mic.select_pin_name} pin low (left slot) and the other's high (right slot).`
