@@ -40,9 +40,10 @@ Transform from configuration space to task space (end-effector pose):
 For a single segment:
   T = Rz(φ) · Arc(κ, s) · Rz(-φ)
 
-Where Arc(κ, s) produces:
-  Position: [sin(κs)/κ, 0, (1-cos(κs))/κ]
-  Rotation: About X-axis by angle κs
+Where Arc(κ, s) produces (base at the origin, backbone along +Z, bend toward +X):
+  Position: [(1-cos(κs))/κ, 0, sin(κs)/κ]
+  Rotation: About Y-axis by angle κs
+Rz(φ) then turns the bend toward (cos φ, sin φ) in the XY plane.
 ```
 
 **Multi-segment composition:**
@@ -76,12 +77,17 @@ Tendon 3 (θ=240°): ΔL₃ = -10 × 0.1 × 0.01 × cos(45°-240°) = +9.66mm
 
 Find configuration (κ, φ) to reach desired pose:
 
-**1-segment (analytical solution):**
+**1-segment (analytical solution, as implemented by `mcp__kinematics__inverse_kinematics`):**
 ```
-Given desired tip position (x, z):
-  κ = 2z / (x² + z²)
-  φ = atan2(y, x)  // for 3D
+Given desired tip position (x, y, z) and segment length s:
+  r = √(x² + y²)           // lateral offset from the backbone axis
+  φ = atan2(y, x)          // bending plane
+  θ = 2 · atan2(r, z)      // bend angle that points the tip at the target
+  κ = θ / s
 ```
+A fixed-length segment reaches a surface, not a volume: the tool reports the
+achieved tip position and `residual_mm`, and `reachable` is true only when the
+target lies on that surface (within `tolerance_mm`) and within `kappa_max`.
 
 **Multi-segment (numerical):**
 - Use Jacobian-based iterative solver
@@ -182,7 +188,7 @@ When computing kinematics, produce:
     "s": 0.1
   },
   "outputs": {
-    "end_effector_position": [0.099, 0.0, 0.005],
+    "end_effector_position": [0.0325, 0.0325, 0.0841],
     "end_effector_rotation": [[...], [...], [...]],
     "tendon_lengths": [-7.07, -2.59, 9.66]
   },
