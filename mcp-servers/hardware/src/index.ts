@@ -32,6 +32,22 @@ function hasDuplicates(pins: number[]): boolean {
   return new Set(pins).size !== pins.length;
 }
 
+/** I2S MEMS microphone parts the generator knows. Both are 32-bit-slot, MSB-first Philips I2S. */
+const MIC_PARTS = {
+  INMP441: {
+    description: "InvenSense INMP441 (PRD part)",
+    data_bits: 24,
+    select_pin_name: "L/R",
+  },
+  SPH645LM4H: {
+    description: "Knowles SPH645LM4H-B (frozen BOM part)",
+    data_bits: 18,
+    select_pin_name: "SELECT",
+  },
+} as const;
+
+type MicPart = keyof typeof MIC_PARTS;
+
 // Default pin assignments when the caller does not provide any.
 const DEFAULT_STEP_PINS = [4, 6, 8];
 const DEFAULT_DIR_PINS = [5, 7, 9];
@@ -86,12 +102,53 @@ server.registerTool(
       return errorResult("step_pins and dir_pins must all be distinct GPIO numbers.");
     }
 
+    const header = `
+// Auto-generated stepper driver interface
+#ifndef STEPPER_DRIVER_H
+#define STEPPER_DRIVER_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include "driver/gpio.h"
+#include "esp_err.h"
+
+typedef struct {
+    gpio_num_t step_pin;
+    gpio_num_t dir_pin;
+    gpio_num_t enable_pin;   // GPIO_NUM_NC when the driver has no enable line
+    int32_t position;        // Current position in steps
+    int32_t target_position; // Target position in steps
+    uint32_t step_delay_us;  // Microseconds between steps
+    bool enabled;
+} stepper_t;
+
+// Initialize stepper GPIO
+esp_err_t stepper_init(stepper_t* stepper);
+
+// Move stepper by relative steps (blocking)
+esp_err_t stepper_move_relative(stepper_t* stepper, int32_t steps);
+
+// Move stepper to absolute position (blocking)
+esp_err_t stepper_move_absolute(stepper_t* stepper, int32_t target);
+
+// Non-blocking step toward target_position (call from timer ISR)
+void stepper_step_isr(stepper_t* stepper);
+
+// Configure every stepper in the generated table
+void steppers_init(void);
+
+// Move tendon \`index\` by \`mm\` millimetres using STEPS_PER_MM
+esp_err_t steppers_move_tendon_mm(int index, float mm);
+
+#endif
+`;
+
     const code = `
 // Auto-generated stepper driver for ${num_steppers} motors
 // Steps per mm: ${steps_per_mm}
 
 #include "stepper_driver.h"
-#include "driver/gpio.h"
+#include "esp_rom_sys.h"
 
 #define NUM_STEPPERS ${num_steppers}
 #define STEPS_PER_MM ${steps_per_mm}
@@ -102,12 +159,76 @@ ${stepPins
     (stepPin, i) => `    {
         .step_pin = GPIO_NUM_${stepPin},
         .dir_pin = GPIO_NUM_${dirPins[i]},
+        .enable_pin = GPIO_NUM_NC,
         .position = 0,
-        .step_delay_us = 500
+        .target_position = 0,
+        .step_delay_us = 500,
+        .enabled = false
     }`
   )
   .join(",\n")}
 };
+
+static inline void stepper_pulse(stepper_t* stepper) {
+    gpio_set_level(stepper->step_pin, 1);
+    esp_rom_delay_us(stepper->step_delay_us);
+    gpio_set_level(stepper->step_pin, 0);
+    esp_rom_delay_us(stepper->step_delay_us);
+}
+
+esp_err_t stepper_init(stepper_t* stepper) {
+    uint64_t mask = (1ULL << stepper->step_pin) | (1ULL << stepper->dir_pin);
+    if (stepper->enable_pin != GPIO_NUM_NC) {
+        mask |= (1ULL << stepper->enable_pin);
+    }
+    gpio_config_t io = {
+        .pin_bit_mask = mask,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    esp_err_t err = gpio_config(&io);
+    if (err != ESP_OK) {
+        return err;
+    }
+    gpio_set_level(stepper->step_pin, 0);
+    gpio_set_level(stepper->dir_pin, 0);
+    if (stepper->enable_pin != GPIO_NUM_NC) {
+        gpio_set_level(stepper->enable_pin, 0); // A4988/TMC2209: active low
+    }
+    stepper->enabled = true;
+    return ESP_OK;
+}
+
+esp_err_t stepper_move_relative(stepper_t* stepper, int32_t steps) {
+    if (!stepper->enabled) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    gpio_set_level(stepper->dir_pin, steps >= 0 ? 1 : 0);
+    int32_t count = steps >= 0 ? steps : -steps;
+    for (int32_t i = 0; i < count; i++) {
+        stepper_pulse(stepper);
+    }
+    stepper->position += steps;
+    stepper->target_position = stepper->position;
+    return ESP_OK;
+}
+
+esp_err_t stepper_move_absolute(stepper_t* stepper, int32_t target) {
+    return stepper_move_relative(stepper, target - stepper->position);
+}
+
+void stepper_step_isr(stepper_t* stepper) {
+    if (!stepper->enabled || stepper->position == stepper->target_position) {
+        return;
+    }
+    int32_t dir = stepper->target_position > stepper->position ? 1 : -1;
+    gpio_set_level(stepper->dir_pin, dir > 0 ? 1 : 0);
+    gpio_set_level(stepper->step_pin, 1);
+    gpio_set_level(stepper->step_pin, 0);
+    stepper->position += dir;
+}
 
 void steppers_init(void) {
     for (int i = 0; i < NUM_STEPPERS; i++) {
@@ -115,13 +236,17 @@ void steppers_init(void) {
     }
 }
 
-void steppers_move_tendon_mm(int index, float mm) {
+esp_err_t steppers_move_tendon_mm(int index, float mm) {
+    if (index < 0 || index >= NUM_STEPPERS) {
+        return ESP_ERR_INVALID_ARG;
+    }
     int32_t steps = (int32_t)(mm * STEPS_PER_MM);
-    stepper_move_relative(&steppers[index], steps);
+    return stepper_move_relative(&steppers[index], steps);
 }
 `;
 
     return jsonResult({
+      files: { "stepper_driver.h": header, "stepper_driver.c": code },
       code,
       gpio_assignments: { step_pins: stepPins, dir_pins: dirPins },
     });
@@ -150,8 +275,13 @@ server.registerTool(
 server.registerTool(
   "configure_microphone",
   {
-    description: "Generate I2S microphone configuration for INMP441",
+    description:
+      "Generate ESP-IDF I2S configuration for the digital MEMS microphones (INMP441 per the PRD, or Knowles SPH645LM4H per the frozen BOM)",
     inputSchema: {
+      part: z
+        .enum(["INMP441", "SPH645LM4H"])
+        .default("INMP441")
+        .describe("Microphone part: INMP441 (24-bit data) or SPH645LM4H (18-bit data)"),
       num_mics: z
         .number()
         .int()
@@ -170,15 +300,26 @@ server.registerTool(
       din_pin: gpio.default(12).describe("Data input GPIO pin"),
     },
   },
-  async ({ num_mics, sample_rate, ws_pin, bclk_pin, din_pin }) => {
+  async ({ part, num_mics, sample_rate, ws_pin, bclk_pin, din_pin }) => {
     if (hasDuplicates([ws_pin, bclk_pin, din_pin])) {
       return errorResult("ws_pin, bclk_pin and din_pin must be distinct GPIO numbers.");
     }
 
+    const mic = MIC_PARTS[part as MicPart];
+    const slotNote =
+      num_mics === 2
+        ? `Tie one microphone's ${mic.select_pin_name} pin low (left slot) and the other's high (right slot).`
+        : `Tie the microphone's ${mic.select_pin_name} pin low to place it in the left slot.`;
+
     const config = `
-// I2S configuration for ${num_mics}x INMP441 microphones
+// I2S configuration for ${num_mics}x ${mic.description}
+// ${slotNote}
+// Samples arrive MSB-first in a 32-bit slot with ${mic.data_bits} significant bits;
+// shift each int32_t right by (32 - MIC_DATA_BITS) to get signed PCM.
 #include "driver/i2s_std.h"
 
+#define MIC_PART "${part}"
+#define MIC_DATA_BITS ${mic.data_bits}
 #define SAMPLE_RATE ${sample_rate}
 #define I2S_WS_PIN GPIO_NUM_${ws_pin}
 #define I2S_BCLK_PIN GPIO_NUM_${bclk_pin}
@@ -199,7 +340,14 @@ i2s_std_config_t std_cfg = {
 };
 `;
 
-    return jsonResult({ config, sample_rate, num_mics });
+    return jsonResult({
+      config,
+      part,
+      data_bits: mic.data_bits,
+      select_pin: mic.select_pin_name,
+      sample_rate,
+      num_mics,
+    });
   }
 );
 

@@ -13,6 +13,17 @@ test("hardware tools validate input and report unimplemented tools", async (t) =
       assert.doesNotMatch(json.code, /undefined/);
     });
 
+    await t.test("emits the header the driver source includes", async () => {
+      const { json } = await callJson(client, "generate_stepper_driver", {});
+      assert.ok(json.files["stepper_driver.h"].includes("typedef struct"));
+      for (const fn of ["stepper_init", "stepper_move_relative", "stepper_move_absolute", "steppers_move_tendon_mm"]) {
+        assert.ok(json.files["stepper_driver.h"].includes(`esp_err_t ${fn}(`), `${fn} declared`);
+        assert.ok(json.files["stepper_driver.c"].includes(`esp_err_t ${fn}(`), `${fn} defined`);
+      }
+      assert.ok(json.files["stepper_driver.c"].includes(".enable_pin = GPIO_NUM_NC"));
+      assert.equal(json.files["stepper_driver.c"], json.code);
+    });
+
     await t.test("refuses more steppers than default pins without explicit pins", async () => {
       const { result, text } = await callJson(client, "generate_stepper_driver", { num_steppers: 4 });
       assert.equal(result.isError, true);
@@ -44,7 +55,26 @@ test("hardware tools validate input and report unimplemented tools", async (t) =
       const { result, json } = await callJson(client, "configure_microphone", {});
       assert.notEqual(result.isError, true);
       assert.equal(json.num_mics, 2);
+      assert.equal(json.part, "INMP441");
+      assert.equal(json.data_bits, 24);
       assert.match(json.config, /GPIO_NUM_12/);
+      assert.match(json.config, /#define MIC_DATA_BITS 24/);
+      assert.match(json.config, /L\/R pin low/);
+    });
+
+    await t.test("configures the Knowles part from the frozen BOM", async () => {
+      const { result, json } = await callJson(client, "configure_microphone", { part: "SPH645LM4H", num_mics: 1 });
+      assert.notEqual(result.isError, true);
+      assert.equal(json.part, "SPH645LM4H");
+      assert.equal(json.data_bits, 18);
+      assert.equal(json.select_pin, "SELECT");
+      assert.match(json.config, /#define MIC_DATA_BITS 18/);
+      assert.match(json.config, /SELECT pin low to place it in the left slot/);
+    });
+
+    await t.test("rejects an unknown microphone part", async () => {
+      const { result } = await callJson(client, "configure_microphone", { part: "ICS43434" });
+      assert.equal(result.isError, true);
     });
 
     await t.test("configure_camera reports itself as unimplemented", async () => {
