@@ -10,9 +10,9 @@ allowed-tools:
   - Edit
   - Bash
   - mcp__hardware__generate_stepper_driver
-  - mcp__hardware__generate_sensor_config
+  - mcp__hardware__configure_camera
+  - mcp__hardware__configure_microphone
   - mcp__hardware__generate_dsp_pipeline
-  - mcp__hardware__compile_firmware
   - pa-kinematics
   - pa-viz
 ---
