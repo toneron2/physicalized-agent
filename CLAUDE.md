@@ -64,10 +64,21 @@ Design a TDCR sensor head with [X] spacer disks and [Y] degree bending range
 
 ## Development
 
-**Building MCP servers:**
+**Building MCP servers** (npm workspaces; run from the repo root):
 ```bash
-cd mcp-servers/<server> && npm install && npm run build
+npm install && npm run build   # compiles mcp-servers/*/src to mcp-servers/*/dist
+npm test                       # builds, then runs mcp-servers/*/test/*.test.mjs
 ```
+Each server is an ES module (`"type": "module"`) compiled with `tsconfig.base.json`;
+`.claude/settings.json` points at the compiled `dist/index.js` files.
+
+**Tool status** (a skill's `allowed-tools` must only list tools a server registers):
+
+| Server | Implemented | Registered but return `isError` (need a backend) |
+|--------|-------------|--------------------------------------------------|
+| `kinematics` | `forward_kinematics`, `inverse_kinematics`, `tendon_mapping`, `workspace_analysis` | — |
+| `hardware` | `generate_stepper_driver`, `configure_microphone` | `configure_camera`, `generate_dsp_pipeline` |
+| `simulation` | `calculate_bom` | `generate_stl`, `analyze_printability`, `render_3d`, `animate_motion` |
 
 **Adding new tools:**
 1. Add tool definition in `mcp-servers/<server>/src/index.ts`
